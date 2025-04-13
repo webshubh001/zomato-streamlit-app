@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from io import BytesIO
 
 st.set_page_config(page_title="Zomato Data Analysis", layout="wide")
 
@@ -11,7 +12,6 @@ st.set_page_config(page_title="Zomato Data Analysis", layout="wide")
 USER_CREDENTIALS = {"admin": "password123", "user": "zomato2024"}
 
 @st.cache_data
-
 def load_data(uploaded_file):
     df = pd.read_csv(uploaded_file, encoding='latin-1')
     df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('[^a-z0-9_]', '', regex=True)
@@ -71,7 +71,7 @@ else:
         df = load_data(uploaded_file)
 
         st.sidebar.title("Zomato Data Explorer")
-        page = st.sidebar.radio("Go to", ["Welcome", "Overview", "Rating Distribution", "Online Ordering", "Cost vs Rating", "Restaurant Types"])
+        page = st.sidebar.radio("Go to", ["Welcome", "Overview", "Rating Distribution", "Online Ordering", "Cost vs Rating", "Restaurant Types", "Edit & Export"])
 
         if page == "Welcome":
             welcome()
@@ -117,5 +117,27 @@ else:
                 st.pyplot(fig)
             else:
                 st.warning("Restaurant types data not available.")
+
+        elif page == "Edit & Export":
+            st.title("✏️ Edit & Export Cleaned Data")
+
+            # Mark read-only columns
+            readonly_cols = ['aggregate_rating', 'average_cost_for_two']
+            edited_df = st.data_editor(
+                df,
+                num_rows="dynamic",
+                column_config={col: st.column_config.Column(disabled=True) for col in readonly_cols}
+            )
+
+            st.success("You can edit cells directly above. Rating and Cost columns are read-only.")
+
+            buffer = BytesIO()
+            edited_df.to_csv(buffer, index=False)
+            st.download_button(
+                label="📥 Download Cleaned Data as CSV",
+                data=buffer.getvalue(),
+                file_name="cleaned_zomato_data.csv",
+                mime="text/csv"
+            )
     else:
         st.warning("Please upload a CSV file to proceed.")
